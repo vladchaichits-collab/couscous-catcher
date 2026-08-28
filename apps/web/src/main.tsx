@@ -126,7 +126,7 @@ function haptic(pattern: number | number[]) {
     navigator.vibrate?.(pattern);
   } catch {}
 }
-const POSTHOG_KEY = "phc_prrPAT65iLHiu6b2GcvcjynqHbLcmDoRLFr5CZkAszK8"; const POSTHOG_HOST = "https://us.i.posthog.com";
+const POSTHOG_KEY = "phc_prrPAT65iLHiu6b2GcvcjynqHbLcmDoRLFr5CZkAszK8"; const POSTHOG_HOST = "https://eu.i.posthog.com";
 const ANALYTICS_ID_KEY = "cc:v02:analytics-id";
 function getAnalyticsId() { let id = localStorage.getItem(ANALYTICS_ID_KEY);
 if (!id) { id = crypto.randomUUID(); localStorage.setItem(ANALYTICS_ID_KEY, id); }
