@@ -131,7 +131,7 @@ const ANALYTICS_ID_KEY = "cc:v02:analytics-id";
 function getAnalyticsId() { let id = localStorage.getItem(ANALYTICS_ID_KEY);
 if (!id) { id = crypto.randomUUID(); localStorage.setItem(ANALYTICS_ID_KEY, id); }
 return id; }
-function track(event: string, properties: Record<string, unknown> = {}) { try { void fetch(${POSTHOG_HOST}/i/v0/e/, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ api_key: POSTHOG_KEY, event, distinct_id: getAnalyticsId(), properties: { ...properties, app: "couscous-catcher", version: "0.2" } }), keepalive: true }); } catch {} }
+function track(event: string, properties: Record<string, unknown> = {}) { try { void fetch(POSTHOG_HOST + "/i/v0/e/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ api_key: POSTHOG_KEY, event, distinct_id: getAnalyticsId(), properties: { ...properties, app: "couscous-catcher", version: "0.2" } }), keepalive: true }); } catch {} }
 function App() {
   
   const [mode, setMode] = useState<Mode>("catch");
