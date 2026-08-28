@@ -126,14 +126,22 @@ function haptic(pattern: number | number[]) {
     navigator.vibrate?.(pattern);
   } catch {}
 }
-
+const POSTHOG_KEY = "phc_prrPAT65iLHiu6b2GcvcjynqHbLcmDoRLFr5CZkAszK8"; const POSTHOG_HOST = "https://us.i.posthog.com";
+const ANALYTICS_ID_KEY = "cc:v02:analytics-id";
+function getAnalyticsId() { let id = localStorage.getItem(ANALYTICS_ID_KEY);
+if (!id) { id = crypto.randomUUID(); localStorage.setItem(ANALYTICS_ID_KEY, id); }
+return id; }
+function track(event: string, properties: Record<string, unknown> = {}) { try { void fetch(${POSTHOG_HOST}/i/v0/e/, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ api_key: POSTHOG_KEY, event, distinct_id: getAnalyticsId(), properties: { ...properties, app: "couscous-catcher", version: "0.2" } }), keepalive: true }); } catch {} }
 function App() {
+  
   const [mode, setMode] = useState<Mode>("catch");
   const [now, setNow] = useState(new Date());
   const [catches, setCatches] = useState<SavedCatch[]>(loadCatches);
   const [discovered, setDiscovered] = useState<string[]>(loadDiscovered);
   const [result, setResult] = useState<SavedCatch | { miss: true; localTime: string } | null>(null);
-
+useEffect(() => {
+  track("app_open");
+}, []);
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 40);
     return () => window.clearInterval(id);
@@ -158,6 +166,9 @@ function App() {
 
     if (!primary) {
       setResult({ miss: true, localTime });
+      track("catch_miss", {
+  reason: "no_pattern"
+});
       haptic(12);
       return;
     }
@@ -167,6 +178,9 @@ function App() {
 
     if (duplicate) {
       setResult({ miss: true, localTime });
+      track("catch_miss", {
+  reason: "duplicate"
+});
       haptic([10, 35, 10]);
       return;
     }
@@ -194,10 +208,25 @@ function App() {
     setDiscovered(nextDiscovered);
     persist(nextCatches, nextDiscovered);
     setResult(item);
+    track("catch_success", {
+  mode: item.mode,
+  primary_pattern: item.primaryPattern,
+  matched_patterns: item.matchedPatterns,
+  rarity: item.rarity,
+  accuracy_ms: item.accuracyMs,
+  accuracy_tier: item.accuracyTier,
+  score: item.score
+});
     haptic(primary.rank >= 60 ? [50, 35, 90, 35, 140] : [35, 25, 60]);
   };
 
   const shareCatch = async (item: SavedCatch) => {
+track("share_clicked", {
+  mode: item.mode,
+  primary_pattern: item.primaryPattern,
+  rarity: item.rarity,
+  score: item.score
+});
     const primary = PATTERN_CATALOG.find(p => p.id === item.primaryPattern);
     const text =
       `${primary?.name || item.primaryPattern} CAUGHT\n` +
