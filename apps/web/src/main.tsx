@@ -220,29 +220,55 @@ useEffect(() => {
     haptic(primary.rank >= 60 ? [50, 35, 90, 35, 140] : [35, 25, 60]);
   };
 
-  const shareCatch = async (item: SavedCatch) => {
-track("share_clicked", {
-  mode: item.mode,
-  primary_pattern: item.primaryPattern,
-  rarity: item.rarity,
-  score: item.score
-});
-    const primary = PATTERN_CATALOG.find(p => p.id === item.primaryPattern);
-    const text =
-      `${primary?.name || item.primaryPattern} CAUGHT\n` +
-      `${item.localTime}\n` +
-      `+${item.accuracyMs} ms · ${item.accuracyTier}\n` +
-      `🔥 ${streak} day streak\n\nCouscous Catcher`;
+ const shareMoment = async ({
+  kind,
+  time,
+  label,
+  details
+}: {
+  kind: "catch" | "miss" | "ultimate";
+  time: string;
+  label?: string;
+  details?: string;
+}) => {
+  track("share_clicked", {
+    kind,
+    time,
+    label: label || null
+  });
 
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "Couscous Catcher", text });
-      } else {
-        await navigator.clipboard?.writeText(text);
-        alert("Catch copied.");
-      }
-    } catch {}
-  };
+  const text =
+    `${label || "MOMENT CAUGHT"}\n` +
+    `${time}\n` +
+    `${details ? `${details}\n` : ""}` +
+    `\nCouscous Catcher\n` +
+    `https://couscous-catcher.vercel.app`;
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: "Couscous Catcher",
+        text
+      });
+    } else {
+      await navigator.clipboard?.writeText(text);
+      alert("Moment copied.");
+    }
+  } catch {}
+};
+
+const shareCatch = async (item: SavedCatch) => {
+  const primary = PATTERN_CATALOG.find(p => p.id === item.primaryPattern);
+
+  await shareMoment({
+    kind: "catch",
+    time: item.localTime,
+    label: `${primary?.name || item.primaryPattern} CAUGHT`,
+    details:
+      `+${item.accuracyMs} ms · ${item.accuracyTier}\n` +
+      `🔥 ${streak} day streak`
+  });
+};
 
   return (
     <main className="app">
@@ -275,8 +301,28 @@ track("share_clicked", {
             <div className="eyebrow">NOT THIS TIME</div>
             <h1>NO COUSCOUS</h1>
             <div className="timestamp">{result.localTime}</div>
-            <button className="primaryPill" onClick={() => setResult(null)}>CONTINUE</button>
-          </div>
+<div className="actions">
+  <button
+    className="primaryPill"
+    onClick={() =>
+      shareMoment({
+        kind: "miss",
+        time: result.localTime,
+        label: "MOMENT CAUGHT",
+        details: "No known pattern — but maybe you know why."
+      })
+    }
+  >
+    SHARE
+  </button>
+
+  <button
+    className="secondaryPill"
+    onClick={() => setResult(null)}
+  >
+    CONTINUE
+  </button>
+</div>          </div>
         )}
 
         {mode === "catch" && result && !("miss" in result) && (
@@ -288,8 +334,18 @@ track("share_clicked", {
           />
         )}
 
-        {mode === "ultimate" && <Ultimate />}
-        {mode === "collection" && (
+{mode === "ultimate" && (
+  <Ultimate
+    onShare={(time, label, details) =>
+      shareMoment({
+        kind: "ultimate",
+        time,
+        label,
+        details
+      })
+    }
+  />
+)}        {mode === "collection" && (
           <Collection
             catches={catches}
             discovered={discovered}
@@ -352,8 +408,11 @@ function CatchResult({
   );
 }
 
-function Ultimate() {
-  const [running, setRunning] = useState(false);
+function Ultimate({
+  onShare
+}: {
+  onShare: (time: string, label?: string, details?: string) => void;
+}) {  const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [startedAt, setStartedAt] = useState(0);
   const [stoppedResult, setStoppedResult] = useState<PatternMatch[] | null>(null);
@@ -437,10 +496,27 @@ function Ultimate() {
           ) : (
             <div className="ultimateMiss">NO COUSCOUS</div>
           )}
-          <div className="actions">
-            <button className="primaryPill" onClick={resume}>CONTINUE</button>
-            <button className="secondaryPill" onClick={reset}>RESET</button>
-          </div>
+<div className="actions">
+  <button
+    className="primaryPill"
+    onClick={() =>
+      onShare(
+        `${pad(mm)}:${pad(ss)}.${pad(ms, 3)}`,
+        stoppedResult && stoppedResult.length > 0
+          ? `${stoppedResult[0].name} CAUGHT`
+          : "MOMENT CAUGHT",
+        stoppedResult && stoppedResult.length > 0
+          ? `${stoppedResult[0].rarity}`
+          : "No known pattern — but maybe you know why."
+      )
+    }
+  >
+    SHARE
+  </button>
+
+  <button className="secondaryPill" onClick={resume}>CONTINUE</button>
+  <button className="secondaryPill" onClick={reset}>RESET</button>
+</div>
         </>
       )}
 
