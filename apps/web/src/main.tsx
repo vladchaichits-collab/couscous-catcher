@@ -422,7 +422,26 @@ const shareCatch = async (item: SavedCatch) => {
       `🔥 ${streak} day streak`
   });
 };
+const previewShareCard = async () => {
+  const blob = await createShareCard({
+    kind: "catch",
+    time: "12:34:56",
+    label: "COUSCOUS CAUGHT",
+    details: "+14 ms · PERFECT\n🔥 3 day streak"
+  });
 
+  if (!blob) {
+    alert("Card generation failed.");
+    return;
+  }
+
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 60000);
+};
   return (
     <main className="app">
       <header className="top">
@@ -430,6 +449,12 @@ const shareCatch = async (item: SavedCatch) => {
         <div className="streak">🔥 {streak}</div>
       </header>
 
+<div className="actions">
+  <button className="secondaryPill" onClick={previewShareCard}>
+    PREVIEW CARD
+  </button>
+</div>
+      
       <section className="screen">
         {mode === "catch" && !result && (
           <>
