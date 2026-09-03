@@ -449,11 +449,6 @@ const previewShareCard = async () => {
         <div className="streak">🔥 {streak}</div>
       </header>
 
-<div className="actions">
-  <button className="secondaryPill" onClick={previewShareCard}>
-    PREVIEW CARD
-  </button>
-</div>
       
       <section className="screen">
         {mode === "catch" && !result && (
