@@ -132,6 +132,130 @@ function getAnalyticsId() { let id = localStorage.getItem(ANALYTICS_ID_KEY);
 if (!id) { id = crypto.randomUUID(); localStorage.setItem(ANALYTICS_ID_KEY, id); }
 return id; }
 function track(event: string, properties: Record<string, unknown> = {}) { try { void fetch(POSTHOG_HOST + "/i/v0/e/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ api_key: POSTHOG_KEY, event, distinct_id: getAnalyticsId(), properties: { ...properties, app: "couscous-catcher", version: "0.2" } }), keepalive: true }); } catch {} }
+async function createShareCard({
+  kind,
+  time,
+  label,
+  details
+}: {
+  kind: "catch" | "miss" | "ultimate";
+  time: string;
+  label?: string;
+  details?: string;
+}) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1350;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const gold = "#d9bd8b";
+  const white = "#f7f5ef";
+  const muted = "#aaa7a0";
+
+  // Background
+  ctx.fillStyle = "#050505";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Subtle rings
+  ctx.strokeStyle = "rgba(217,189,139,0.07)";
+  ctx.lineWidth = 2;
+  for (let r = 260; r <= 850; r += 90) {
+    ctx.beginPath();
+    ctx.arc(540, 410, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Logo block
+  ctx.fillStyle = "#000";
+  ctx.strokeStyle = "rgba(217,189,139,0.45)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(390, 85, 300, 300, 42);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = white;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "900 100px Arial, Helvetica, sans-serif";
+  ctx.fillText("COUS", 540, 190);
+  ctx.fillText("COUS", 540, 290);
+
+  // Eyebrow
+  ctx.fillStyle = gold;
+  ctx.font = "600 34px Arial, Helvetica, sans-serif";
+  ctx.letterSpacing = "8px";
+
+  const eyebrow =
+    kind === "ultimate"
+      ? "ULTIMATE MODE"
+      : kind === "miss"
+        ? "NOT THIS TIME"
+        : "MOMENT CAUGHT";
+
+  ctx.fillText(eyebrow, 540, 475);
+
+  // Time formatting
+  let displayTime = time;
+
+  if (kind !== "ultimate") {
+    displayTime = time.split(".")[0];
+  }
+
+  // Main time
+  ctx.fillStyle = white;
+  ctx.font =
+    kind === "ultimate"
+      ? "900 150px Arial, Helvetica, sans-serif"
+      : "900 170px Arial, Helvetica, sans-serif";
+
+  ctx.fillText(displayTime, 540, 660);
+
+  // Result
+  ctx.fillStyle = gold;
+  ctx.font = "600 42px Arial, Helvetica, sans-serif";
+
+  const resultLabel =
+    label ||
+    (kind === "miss" ? "NO COUSCOUS" : "MOMENT CAUGHT");
+
+  ctx.fillText(resultLabel.toUpperCase(), 540, 795);
+
+  // Details
+  if (details) {
+    ctx.fillStyle = muted;
+    ctx.font = "400 30px Arial, Helvetica, sans-serif";
+
+    const lines = details.split("\n");
+
+    lines.slice(0, 3).forEach((line, index) => {
+      ctx.fillText(line, 540, 875 + index * 46);
+    });
+  }
+
+  // Divider
+  ctx.strokeStyle = "rgba(217,189,139,0.35)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(210, 1070);
+  ctx.lineTo(870, 1070);
+  ctx.stroke();
+
+  // Brand footer
+  ctx.fillStyle = gold;
+  ctx.font = "600 42px Arial, Helvetica, sans-serif";
+  ctx.fillText("Couscous Catcher", 540, 1160);
+
+  return new Promise<Blob | null>(resolve => {
+    canvas.toBlob(
+      blob => resolve(blob),
+      "image/png",
+      1
+    );
+  });
+}
 function App() {
   
   const [mode, setMode] = useState<Mode>("catch");
@@ -220,7 +344,7 @@ useEffect(() => {
     haptic(primary.rank >= 60 ? [50, 35, 90, 35, 140] : [35, 25, 60]);
   };
 
- const shareMoment = async ({
+const shareMoment = async ({
   kind,
   time,
   label,
@@ -236,15 +360,46 @@ useEffect(() => {
     time,
     label: label || null
   });
-
+const shareTime =
+  kind === "ultimate" ? time : time.split(".")[0];
+  
   const text =
     `${label || "MOMENT CAUGHT"}\n` +
-    `${time}\n` +
+`${shareTime}\n` +
     `${details ? `${details}\n` : ""}` +
     `\nCouscous Catcher\n` +
     `https://couscous-catcher.vercel.app`;
 
   try {
+    const blob = await createShareCard({
+      kind,
+      time,
+      label,
+      details
+    });
+
+    if (blob) {
+      const file = new File(
+        [blob],
+        `couscous-${Date.now()}.png`,
+        { type: "image/png" }
+      );
+
+      const shareData = {
+        title: "Couscous Catcher",
+        text,
+        files: [file]
+      };
+
+      if (
+        navigator.share &&
+        navigator.canShare?.({ files: [file] })
+      ) {
+        await navigator.share(shareData);
+        return;
+      }
+    }
+
     if (navigator.share) {
       await navigator.share({
         title: "Couscous Catcher",
@@ -269,7 +424,26 @@ const shareCatch = async (item: SavedCatch) => {
       `🔥 ${streak} day streak`
   });
 };
+const previewShareCard = async () => {
+  const blob = await createShareCard({
+    kind: "catch",
+    time: "12:34:56",
+    label: "COUSCOUS CAUGHT",
+    details: "+14 ms · PERFECT\n🔥 3 day streak"
+  });
 
+  if (!blob) {
+    alert("Card generation failed.");
+    return;
+  }
+
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 60000);
+};
   return (
     <main className="app">
       <header className="top">
@@ -277,6 +451,7 @@ const shareCatch = async (item: SavedCatch) => {
         <div className="streak">🔥 {streak}</div>
       </header>
 
+      
       <section className="screen">
         {mode === "catch" && !result && (
           <>
@@ -308,7 +483,7 @@ const shareCatch = async (item: SavedCatch) => {
       shareMoment({
         kind: "miss",
         time: result.localTime,
-        label: "MOMENT CAUGHT",
+label: "NO COUSCOUS",
         details: "No known pattern — but maybe you know why."
       })
     }
