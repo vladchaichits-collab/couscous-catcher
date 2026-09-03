@@ -360,10 +360,12 @@ const shareMoment = async ({
     time,
     label: label || null
   });
-
+const shareTime =
+  kind === "ultimate" ? time : time.split(".")[0];
+  
   const text =
     `${label || "MOMENT CAUGHT"}\n` +
-    `${time}\n` +
+`${shareTime}\n` +
     `${details ? `${details}\n` : ""}` +
     `\nCouscous Catcher\n` +
     `https://couscous-catcher.vercel.app`;
@@ -481,7 +483,7 @@ const previewShareCard = async () => {
       shareMoment({
         kind: "miss",
         time: result.localTime,
-        label: "MOMENT CAUGHT",
+label: "NO COUSCOUS",
         details: "No known pattern — but maybe you know why."
       })
     }
