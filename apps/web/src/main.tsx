@@ -531,7 +531,7 @@ const previewShareCard = async () => {
             <div className="timestamp">{result.localTime}</div>
             <MissMomentSave
   time={result.localTime.split(".")[0]}
-  onSave={(title) =>
+  onSave={(title) => {
     saveMoment(
       title,
       result.localTime.split(".")[0],
