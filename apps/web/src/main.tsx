@@ -28,6 +28,7 @@ type SavedCatch = {
   matchedPatterns: string[];
   rarity: string;
   score: number;
+  };
   type SavedMoment = {
   id: string;
   timestamp: number;
@@ -35,7 +36,6 @@ type SavedCatch = {
   time: string;
   date: string;
   kind: "catch" | "ultimate";
-};
 };
 
 const STORAGE_KEY = "cc:v02:catches";
