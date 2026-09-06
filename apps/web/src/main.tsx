@@ -241,18 +241,25 @@ async function createShareCard({
     (kind === "miss" ? "NO COUSCOUS" : "MOMENT CAUGHT");
 
   ctx.fillText(resultLabel.toUpperCase(), 540, 795);
+if (details) {
+  ctx.fillStyle = white;
+  ctx.font = "700 34px Arial, Helvetica, sans-serif";
 
-  // Details
-  if (details) {
-    ctx.fillStyle = muted;
-    ctx.font = "400 30px Arial, Helvetica, sans-serif";
+  const titleLine = details.split("\n")[0];
 
-    const lines = details.split("\n");
+  ctx.fillText(titleLine, 540, 860);
+}
+// Details
+if (details) {
+  ctx.fillStyle = muted;
+  ctx.font = "400 30px Arial, Helvetica, sans-serif";
 
-    lines.slice(0, 3).forEach((line, index) => {
-      ctx.fillText(line, 540, 875 + index * 46);
-    });
-  }
+  const lines = details.split("\n").slice(1);
+
+  lines.slice(0, 2).forEach((line, index) => {
+    ctx.fillText(line, 540, 920 + index * 46);
+  });
+}
 
   // Divider
   ctx.strokeStyle = "rgba(217,189,139,0.35)";
@@ -439,8 +446,6 @@ const shareTime =
       );
 
       const shareData = {
-        title: "Couscous Catcher",
-        text,
         files: [file]
       };
 
