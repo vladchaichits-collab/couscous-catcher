@@ -282,8 +282,10 @@ function App() {
   const [catches, setCatches] = useState<SavedCatch[]>(loadCatches);
   const [discovered, setDiscovered] = useState<string[]>(loadDiscovered);
   const [moments, setMoments] = useState<SavedMoment[]>(loadMoments)
-  const [result, setResult] = useState<SavedCatch | { miss: true; localTime: string } | null>(null);
-useEffect(() => {
+const [result, setResult] = useState<
+  SavedCatch | { miss: true; localTime: string; title?: string } | null
+>(null);
+  useEffect(() => {
   track("app_open");
 }, []);
   useEffect(() => {
@@ -534,8 +536,13 @@ const previewShareCard = async () => {
       title,
       result.localTime.split(".")[0],
       "catch"
-    )
-  }
+  );
+
+  setResult({
+    ...result,
+    title
+  });
+}}
 />
 <div className="actions">
   <button
@@ -545,8 +552,7 @@ const previewShareCard = async () => {
         kind: "miss",
         time: result.localTime,
 label: "NO COUSCOUS",
-        details: "No known pattern — but maybe you know why."
-      })
+details: result.title || "No known pattern — but maybe you know why."      })
     }
   >
     SHARE
