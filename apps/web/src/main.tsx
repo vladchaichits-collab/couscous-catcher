@@ -527,6 +527,16 @@ const previewShareCard = async () => {
             <div className="eyebrow">NOT THIS TIME</div>
             <h1>NO COUSCOUS</h1>
             <div className="timestamp">{result.localTime}</div>
+            <MissMomentSave
+  time={result.localTime.split(".")[0]}
+  onSave={(title) =>
+    saveMoment(
+      title,
+      result.localTime.split(".")[0],
+      "catch"
+    )
+  }
+/>
 <div className="actions">
   <button
     className="primaryPill"
@@ -615,7 +625,46 @@ label: "NO COUSCOUS",
     </main>
   );
 }
+function MissMomentSave({
+  time,
+  onSave
+}: {
+  time: string;
+  onSave: (title: string) => void;
+}) {
+  const [momentTitle, setMomentTitle] = useState("");
+  const [saved, setSaved] = useState(false);
 
+  const handleSave = () => {
+    if (!momentTitle.trim()) return;
+
+    onSave(momentTitle);
+    setSaved(true);
+  };
+
+  return (
+    <div className="momentSave">
+      <input
+        type="text"
+        value={momentTitle}
+        maxLength={60}
+        placeholder="Name this moment…"
+        onChange={(e) => {
+          setMomentTitle(e.target.value);
+          setSaved(false);
+        }}
+      />
+
+      <button
+        className="secondaryPill"
+        disabled={!momentTitle.trim() || saved}
+        onClick={handleSave}
+      >
+        {saved ? "SAVED ✓" : "SAVE MOMENT"}
+      </button>
+    </div>
+  );
+}
 function CatchResult({
   item,
   streak,
