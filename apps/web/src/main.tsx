@@ -28,10 +28,19 @@ type SavedCatch = {
   matchedPatterns: string[];
   rarity: string;
   score: number;
+  type SavedMoment = {
+  id: string;
+  timestamp: number;
+  title: string;
+  time: string;
+  date: string;
+  kind: "catch" | "ultimate";
+};
 };
 
 const STORAGE_KEY = "cc:v02:catches";
 const DISCOVERED_KEY = "cc:v02:discovered";
+const MOMENTS_KEY = "cc:v02:moments"
 
 const pad = (n: number, size = 2) => String(n).padStart(size, "0");
 
@@ -73,7 +82,17 @@ function loadDiscovered(): string[] {
     return [];
   }
 }
+function loadMoments(): SavedMoment[] {
+  try {
+    return JSON.parse(localStorage.getItem(MOMENTS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
 
+function persistMoments(moments: SavedMoment[]) {
+  localStorage.setItem(MOMENTS_KEY, JSON.stringify(moments));
+}
 function persist(catches: SavedCatch[], discovered: string[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(catches));
   localStorage.setItem(DISCOVERED_KEY, JSON.stringify(discovered));
@@ -262,6 +281,7 @@ function App() {
   const [now, setNow] = useState(new Date());
   const [catches, setCatches] = useState<SavedCatch[]>(loadCatches);
   const [discovered, setDiscovered] = useState<string[]>(loadDiscovered);
+  const [moments, setMoments] = useState<SavedMoment[]>(loadMoments)
   const [result, setResult] = useState<SavedCatch | { miss: true; localTime: string } | null>(null);
 useEffect(() => {
   track("app_open");
@@ -343,7 +363,38 @@ useEffect(() => {
 });
     haptic(primary.rank >= 60 ? [50, 35, 90, 35, 140] : [35, 25, 60]);
   };
+const saveMoment = (
+  title: string,
+  time: string,
+  kind: "catch" | "ultimate"
+) => {
+  const cleanTitle = title.trim();
 
+  if (!cleanTitle) return;
+
+  const d = new Date();
+
+  const moment: SavedMoment = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    timestamp: Date.now(),
+    title: cleanTitle,
+    time,
+    date: localDateKey(d),
+    kind
+  };
+
+  const nextMoments = [...moments, moment];
+
+  setMoments(nextMoments);
+  persistMoments(nextMoments);
+
+  track("moment_saved", {
+    kind,
+    title_length: cleanTitle.length
+  });
+
+  haptic([20, 25, 40]);
+};
 const shareMoment = async ({
   kind,
   time,
@@ -501,12 +552,19 @@ label: "NO COUSCOUS",
         )}
 
         {mode === "catch" && result && !("miss" in result) && (
-          <CatchResult
-            item={result}
-            streak={streak}
-            onShare={() => shareCatch(result)}
-            onContinue={() => setResult(null)}
-          />
+<CatchResult
+  item={result}
+  streak={streak}
+  onShare={() => shareCatch(result)}
+  onSave={(title) =>
+    saveMoment(
+      title,
+      result.localTime.split(".")[0],
+      "catch"
+    )
+  }
+  onContinue={() => setResult(null)}
+/>
         )}
 
 {mode === "ultimate" && (
@@ -521,13 +579,22 @@ label: "NO COUSCOUS",
     }
   />
 )}        {mode === "collection" && (
-          <Collection
-            catches={catches}
-            discovered={discovered}
-            todayHours={todayHours}
-            dailyGoal={dailyGoal}
-            todayCount={todayClockCatches.length}
-          />
+<Collection
+  catches={catches}
+  moments={moments}
+  discovered={discovered}
+  todayHours={todayHours}
+  dailyGoal={dailyGoal}
+  todayCount={todayClockCatches.length}
+  onShareMoment={(moment) =>
+    shareMoment({
+      kind: moment.kind,
+      time: moment.time,
+      label: moment.title,
+      details: moment.date
+    })
+  }
+/>
         )}
       </section>
 
@@ -553,11 +620,13 @@ function CatchResult({
   item,
   streak,
   onShare,
+  onSave,
   onContinue
 }: {
   item: SavedCatch;
   streak: number;
   onShare: () => void;
+  onSave: (title: string) => void;
   onContinue: () => void;
 }) {
   const primary = PATTERN_CATALOG.find(p => p.id === item.primaryPattern)!;
@@ -565,7 +634,15 @@ function CatchResult({
     .filter(id => id !== item.primaryPattern)
     .map(id => PATTERN_CATALOG.find(p => p.id === id)?.name)
     .filter(Boolean);
+const [momentTitle, setMomentTitle] = useState("");
+const [saved, setSaved] = useState(false);
 
+const handleSave = () => {
+  if (!momentTitle.trim()) return;
+
+  onSave(momentTitle);
+  setSaved(true);
+};
   return (
     <div className={`result rarity-${item.rarity.toLowerCase()}`}>
       <div className="eyebrow">{item.rarity} · CAUGHT</div>
@@ -575,6 +652,26 @@ function CatchResult({
       <div className="tier">{item.accuracyTier}</div>
       {names.length > 0 && <div className="combo">COMBO · {names.join(" + ")}</div>}
       <div className="score">+{item.score} XP · 🔥 {streak}</div>
+      <div className="momentSave">
+  <input
+    type="text"
+    value={momentTitle}
+    maxLength={60}
+    placeholder="Name this moment…"
+    onChange={(e) => {
+      setMomentTitle(e.target.value);
+      setSaved(false);
+    }}
+  />
+
+  <button
+    className="secondaryPill"
+    disabled={!momentTitle.trim() || saved}
+    onClick={handleSave}
+  >
+    {saved ? "SAVED ✓" : "SAVE MOMENT"}
+  </button>
+</div>
       <div className="actions">
         <button className="primaryPill" onClick={onShare}>SHARE</button>
         <button className="secondaryPill" onClick={onContinue}>CONTINUE</button>
@@ -702,16 +799,20 @@ function Ultimate({
 
 function Collection({
   catches,
+  moments,
   discovered,
   todayHours,
   dailyGoal,
-  todayCount
+  todayCount,
+  onShareMoment
 }: {
   catches: SavedCatch[];
+  moments: SavedMoment[];
   discovered: string[];
   todayHours: Set<number>;
   dailyGoal: number;
   todayCount: number;
+  onShareMoment: (moment: SavedMoment) => void;
 }) {
   return (
     <div className="collectionWrap">
@@ -749,7 +850,38 @@ function Collection({
           );
         })}
       </div>
+<div className="eyebrow collectionTitle">
+  MOMENTS
+</div>
 
+<div className="momentList">
+  {moments.length === 0 && (
+    <div className="muted">
+      No saved moments yet
+    </div>
+  )}
+
+  {moments
+    .slice()
+    .reverse()
+    .map(moment => (
+      <div className="momentRow" key={moment.id}>
+        <div>
+          <b>{moment.title}</b>
+          <span>
+            {moment.time} · {moment.date}
+          </span>
+        </div>
+
+        <button
+          className="momentShare"
+          onClick={() => onShareMoment(moment)}
+        >
+          SHARE
+        </button>
+      </div>
+    ))}
+</div>
       <div className="eyebrow collectionTitle">RECENT</div>
       <div className="recent">
         {catches.length === 0 && <div className="muted">nothing caught yet</div>}
