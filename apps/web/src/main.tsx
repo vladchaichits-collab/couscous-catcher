@@ -959,4 +959,115 @@ function Collection({
   );
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+function LegalPage({ type }: { type: "privacy" | "support" }) {
+  const isPrivacy = type === "privacy";
+
+  return (
+    <main className="app">
+      <section className="screen">
+        <div className="result">
+          <div className="eyebrow">
+            {isPrivacy ? "PRIVACY POLICY" : "SUPPORT"}
+          </div>
+
+          <h1>
+            {isPrivacy ? "Couscous Catcher" : "Need help?"}
+          </h1>
+
+          {isPrivacy ? (
+            <>
+              <p>
+                Couscous Catcher is designed to work without creating an
+                account or providing personal information.
+              </p>
+
+              <p>
+                We use analytics to understand how the app is used and to
+                improve the experience. This may include events such as opening
+                the app, successful or missed catches, and use of the share
+                function.
+              </p>
+
+              <p>
+                Analytics data is processed using PostHog. We do not
+                intentionally collect names, email addresses, phone numbers,
+                precise location, contacts, photos, or other directly
+                identifying information.
+              </p>
+
+              <p>
+                Game progress such as catches, discovered patterns, saved
+                moments, and streaks may be stored locally on your device.
+              </p>
+
+              <p>
+                When you use the Share feature, the app creates share text
+                and/or an image card for you to send using your device’s
+                sharing options. Couscous Catcher does not control how
+                third-party apps handle anything you choose to share.
+              </p>
+
+              <p>We do not sell personal data.</p>
+
+              <p>
+                If our data practices change, this policy may be updated.
+              </p>
+
+              <p>
+                Contact:{" "}
+                <a href="mailto:couscouscatcher@gmail.com">
+                  couscouscatcher@gmail.com
+                </a>
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                If something is not working as expected, try reopening the app
+                and checking that you are using the latest version.
+              </p>
+
+              <p>
+                If you found a bug, please include what you were doing before
+                the issue happened, what you expected to happen, what actually
+                happened, and a screenshot if possible.
+              </p>
+
+              <p>
+                If sharing does not work in a specific app, try another share
+                destination or save the image first.
+              </p>
+
+              <p>Couscous Catcher does not require an account.</p>
+
+              <p>
+                Support:{" "}
+                <a href="mailto:couscouscatcher@gmail.com">
+                  couscouscatcher@gmail.com
+                </a>
+              </p>
+            </>
+          )}
+
+          <div className="actions">
+            <a className="secondaryPill" href="/">
+              BACK TO GAME
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+const path = window.location.pathname;
+
+createRoot(document.getElementById("root")!).render(
+  path === "/privacy" ? (
+    <LegalPage type="privacy" />
+  ) : path === "/support" ? (
+    <LegalPage type="support" />
+  ) : (
+    <App />
+  )
+);
